@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum Transport: Josephson Junctions & SQUID Simulator</title>
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #121826;
+      --bg-card: #182234;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --cyan: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.4);
+      --purple: #b026ff;
+      --purple-glow: rgba(176, 38, 255, 0.4);
+      --gold: #fbbf24;
+      --gold-glow: rgba(251, 191, 36, 0.4);
+      --emerald: #10b981;
+      --rose: #f43f5e;
+      --border: #233148;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(180deg, #162032 0%, var(--bg-secondary) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .title-box h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #38bdf8, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-box p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .badge {
+      background: rgba(0, 240, 255, 0.12);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    /* Tab Navigation */
+    .tabs-nav {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--bg-secondary);
+      padding: 0.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 0.65rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab-btn.active {
+      color: var(--cyan);
+      background: var(--bg-card);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Layout Grids */
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 1.5rem;
+    }
+
+    .grid-3col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 0.5rem;
+    }
+
+    .card-title span.tag {
+      font-size: 0.75rem;
+      color: var(--gold);
+      background: rgba(251, 191, 36, 0.1);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    /* Visualizer Canvases */
+    canvas {
+      width: 100%;
+      border-radius: 8px;
+      background: #070b13;
+      border: 1px solid #1a2538;
+      display: block;
+    }
+
+    /* Controls Panel */
+    .control-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+
+    .control-val {
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--cyan);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #202b3d;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--cyan);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--cyan);
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #334155;
+      border-color: var(--cyan);
+    }
+
+    .btn.primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border-color: var(--cyan);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .btn.active-toggle {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+
+    /* Math Formula Callouts */
+    .formula-box {
+      background: #0f172a;
+      border-left: 3px solid var(--cyan);
+      padding: 0.75rem 1rem;
+      border-radius: 0 6px 6px 0;
+      margin: 0.8rem 0;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9rem;
+      color: #38bdf8;
+    }
+
+    .formula-box code {
+      font-weight: bold;
+      color: #e0f2fe;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .metric-card {
+      background: #0c1322;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .metric-card .num {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-family: monospace;
+      color: var(--gold);
+    }
+
+    .metric-card .lbl {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Theory Explanations & Accordion */
+    .info-text {
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #cbd5e1;
+      margin-bottom: 0.75rem;
+    }
+
+    .highlight-term {
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      padding: 1rem 2rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="title-box">
+      <h1>Josephson Junctions & SQUID Quantum Interference</h1>
+      <p>Fundamentals of Quantum Transport & Nanoelectronics | Interactive Simulation Laboratory</p>
+    </div>
+    <div class="badge">Macroscopic Quantum State &Psi; = &radic;&rho; e<sup>i&phi;</sup></div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('squid-tab', this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="3" x2="12" y2="9"/><line x1="12" y1="15" x2="12" y2="21"/></svg>
+      1. DC SQUID Quantum Interference
+    </button>
+    <button class="tab-btn" onclick="switchTab('washboard-tab', this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12c3-5 6 5 9 0s6 5 9 0"/><circle cx="8" cy="8" r="2"/></svg>
+      2. Tilted Washboard & Phase Dynamics
+    </button>
+    <button class="tab-btn" onclick="switchTab('iv-tab', this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="21" x2="21" y2="21"/><line x1="3" y1="3" x2="3" y2="21"/><path d="M3 21l6-12 6 8 6-14"/></svg>
+      3. RCSJ I-V Curve & Shapiro Steps
+    </button>
+    <button class="tab-btn" onclick="switchTab('theory-tab', this)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      4. Quantum Principles & Nanoelectronics
+    </button>
+  </nav>
+
+  <!-- Main View -->
+  <main>
+
+    <!-- ======================================================== -->
+    <!-- TAB 1: DC SQUID QUANTUM INTERFERENCE                      -->
+    <!-- ======================================================== -->
+    <div id="squid-tab" class="tab-content active">
+      <div class="grid-2col">
+        
+        <!-- Left: Live Visual Canvas -->
+        <div class="card">
+          <div class="card-title">
+            <span>SQUID Superconducting Loop & Cooper Pair Matter Waves</span>
+            <span class="tag">Quantum Phase Coherence</span>
+          </div>
+          <canvas id="squidCanvas" height="420"></canvas>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="num" id="readoutIcMax">2.00 I_c0</div>
+              <div class="lbl">Max Critical Current I_c(&Phi;)</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutPhaseDiff">0.00 &pi;</div>
+              <div class="lbl">Phase Shift &Delta;&phi; = 2&pi; &Phi;/&Phi;<sub>0</sub></div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutInterference">100%</div>
+              <div class="lbl">Interference State (Constructive)</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutCirculating">0.00 I_c0</div>
+              <div class="lbl">Circulating Current I_circ</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Real-time Curve & Controls -->
+        <div>
+          <div class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-title">
+              <span>Critical Current vs Applied Flux I_c(&Phi;)</span>
+              <span class="tag">&Phi;<sub>0</sub> = h / 2e &asymp; 2.0678 fWb</span>
+            </div>
+            <canvas id="squidPlotCanvas" height="230"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Physical Parameter Controls</div>
+
+            <!-- Parameter 1: Applied Magnetic Flux -->
+            <div class="control-group">
+              <div class="control-label">
+                <span>Applied Magnetic Flux (&Phi; / &Phi;<sub>0</sub>)</span>
+                <span class="control-val" id="valFlux">0.00</span>
+              </div>
+              <input type="range" id="sliderFlux" min="-2.5" max="2.5" step="0.01" value="0">
+            </div>
+
+            <!-- Parameter 2: Junction Asymmetry -->
+            <div class="control-group">
+              <div class="control-label">
+                <span>Junction Asymmetry &alpha; = I<sub>c2</sub> / I<sub>c1</sub></span>
+                <span class="control-val" id="valAsym">1.00</span>
+              </div>
+              <input type="range" id="sliderAsym" min="0.1" max="1.0" step="0.02" value="1.0">
+            </div>
+
+            <!-- Parameter 3: Screening Parameter beta_L -->
+            <div class="control-group">
+              <div class="control-label">
+                <span>Screening Inductance Parameter &beta;<sub>L</sub> = 2 L I<sub>c</sub> / &Phi;<sub>0</sub></span>
+                <span class="control-val" id="valBetaL">0.00</span>
+              </div>
+              <input type="range" id="sliderBetaL" min="0.0" max="2.0" step="0.05" value="0.0">
+            </div>
+
+            <div class="btn-row">
+              <button class="btn primary" id="btnSweepFlux" onclick="toggleFluxSweep()">Auto-Sweep Flux &Phi;(t)</button>
+              <button class="btn" onclick="setPreset('destructive')">&Phi; = 0.5 &Phi;<sub>0</sub> (Dark Null)</button>
+              <button class="btn" onclick="setPreset('constructive')">&Phi; = 1.0 &Phi;<sub>0</sub> (Bright Peak)</button>
+              <button class="btn" onclick="setPreset('asymmetric')">Asymmetric SQUID</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: TILTED WASHBOARD POTENTIAL & PHASE DYNAMICS         -->
+    <!-- ======================================================== -->
+    <div id="washboard-tab" class="tab-content">
+      <div class="grid-2col">
+        
+        <!-- Left: The Physical Washboard Animation -->
+        <div class="card">
+          <div class="card-title">
+            <span>Mechanical Analogy: Tilted Washboard Potential</span>
+            <span class="tag">U(&phi;) = -E<sub>J</sub> [cos &phi; + (I / I<sub>c</sub>)&phi;]</span>
+          </div>
+          <canvas id="washboardCanvas" height="420"></canvas>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="num" id="readoutState">Trapped (V = 0)</div>
+              <div class="lbl">Superconducting Regime</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutPhase">0.00 rad</div>
+              <div class="lbl">Josephson Phase &phi;</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutVoltage">0.00 &mu;V</div>
+              <div class="lbl">Instantaneous Voltage V = (&hbar;/2e) d&phi;/dt</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutSupercurrent">0.00 I_c</div>
+              <div class="lbl">Supercurrent I_s = I_c sin(&phi;)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Time-Domain Oscilloscope & Controls -->
+        <div>
+          <div class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-title">
+              <span>Oscilloscope: Phase &phi;(t) and Voltage Pulses V(t)</span>
+              <span class="tag">AC Josephson Frequency &omega;<sub>J</sub> = 2eV / &hbar;</span>
+            </div>
+            <canvas id="scopeCanvas" height="230"></canvas>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Bias & Damping Parameters</div>
+
+            <!-- Bias Current -->
+            <div class="control-group">
+              <div class="control-label">
+                <span>Bias Current (I / I<sub>c</sub>)</span>
+                <span class="control-val" id="valCurrent">0.50</span>
+              </div>
+              <input type="range" id="sliderCurrent" min="0.0" max="2.5" step="0.01" value="0.50">
+            </div>
+
+            <!-- Damping / Capacitance (Stewart-McCumber beta_C) -->
+            <div class="control-group">
+              <div class="control-label">
+                <span>Stewart-McCumber Parameter &beta;<sub>C</sub> = 2e I<sub>c</sub> R<sup>2</sup> C / &hbar;</span>
+                <span class="control-val" id="valBetaC">0.20 (Overdamped)</span>
+              </div>
+              <input type="range" id="sliderBetaC" min="0.0" max="4.0" step="0.05" value="0.2">
+            </div>
+
+            <div class="btn-row">
+              <button class="btn primary" onclick="kickParticle()">Add Thermal Noise / Quantum Kick</button>
+              <button class="btn" onclick="setWashboardPreset('subcritical')">I &lt; I_c (Trapped, V=0)</button>
+              <button class="btn" onclick="setWashboardPreset('critical')">I &gt; I_c (Running, V&gt;0)</button>
+              <button class="btn" onclick="setWashboardPreset('underdamped')">Underdamped (&beta;<sub>C</sub>=3.0)</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3: RCSJ I-V CHARACTERISTIC & SHAPIRO STEPS             -->
+    <!-- ======================================================== -->
+    <div id="iv-tab" class="tab-content">
+      <div class="grid-2col">
+        
+        <!-- Left: Current-Voltage Curve -->
+        <div class="card">
+          <div class="card-title">
+            <span>RCSJ Current-Voltage (I-V) Characteristics</span>
+            <span class="tag">Hysteresis & Microwave Quantization</span>
+          </div>
+          <canvas id="ivCanvas" height="420"></canvas>
+          
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="num" id="readoutSwitchingI">1.00 I_c</div>
+              <div class="lbl">Switching Current I_c</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutRetrappingI">0.95 I_c</div>
+              <div class="lbl">Retrapping Current I_r &asymp; (4/&pi;)I_c/&radic;&beta;<sub>C</sub></div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutStepSpacing">103.4 &mu;V</div>
+              <div class="lbl">Shapiro Step &Delta;V = &hbar;&omega; / 2e</div>
+            </div>
+            <div class="metric-card">
+              <div class="num" id="readoutNormalR">100 &Omega;</div>
+              <div class="lbl">Normal State Resistance R<sub>N</sub></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: RF Microwave Irradiation & Controls -->
+        <div>
+          <div class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-title">
+              <span>AC Josephson Effect: Phase Locking (Shapiro Steps)</span>
+              <span class="tag">V<sub>n</sub> = n &middot; (h f / 2e)</span>
+            </div>
+            <p class="info-text">
+              When a Josephson junction is irradiated by microwaves of frequency $f = \omega_{\text{rf}} / 2\pi$, 
+              the Cooper pair tunneling frequency locks to harmonics of the external RF drive, producing exact constant-voltage plateaus. 
+              This is the international primary standard for the definition of the <strong>Volt</strong>!
+            </p>
+            <div class="formula-box">
+              <code>V_n = n &middot; &Phi;<sub>0</sub> &middot; f = n &middot; (h / 2e) &middot; f</code>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Simulation Parameters</div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>Stewart-McCumber &beta;<sub>C</sub></span>
+                <span class="control-val" id="valIvBetaC">0.5</span>
+              </div>
+              <input type="range" id="sliderIvBetaC" min="0.0" max="6.0" step="0.1" value="0.5" oninput="updateIVCurve()">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>RF Microwave Amplitude (I<sub>rf</sub> / I<sub>c</sub>)</span>
+                <span class="control-val" id="valIrf">0.00 (Off)</span>
+              </div>
+              <input type="range" id="sliderIrf" min="0.0" max="1.5" step="0.05" value="0.0" oninput="updateIVCurve()">
+            </div>
+
+            <div class="control-group">
+              <div class="control-label">
+                <span>RF Frequency (&omega;<sub>rf</sub> / &omega;<sub>c</sub>)</span>
+                <span class="control-val" id="valOmegaRf">0.50</span>
+              </div>
+              <input type="range" id="sliderOmegaRf" min="0.1" max="1.5" step="0.05" value="0.5" oninput="updateIVCurve()">
+            </div>
+
+            <div class="btn-row">
+              <button class="btn primary" onclick="setShapiroPreset(0.6)">Enable Microwaves (Shapiro Steps)</button>
+              <button class="btn" onclick="setHysteresisPreset(4.0)">Strong Hysteresis (&beta;<sub>C</sub> = 4.0)</button>
+              <button class="btn" onclick="setShapiroPreset(0.0)">Pure DC (No RF)</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- TAB 4: QUANTUM PRINCIPLES & NANOELECTRONICS                -->
+    <!-- ======================================================== -->
+    <div id="theory-tab" class="tab-content">
+      <div class="grid-3col">
+        
+        <!-- Column 1: Quantum Foundations -->
+        <div class="card">
+          <div class="card-title">
+            <span>1. Macroscopic Quantum State</span>
+            <span class="tag">BCS Theory</span>
+          </div>
+          <p class="info-text">
+            In superconductors, electrons with opposite momentum and spin bind into <strong>Cooper pairs</strong> of charge $q = -2e$ and mass $2m_e$.
+          </p>
+          <div class="formula-box">
+            <code>&Psi;(r, t) = &radic;n<sub>s</sub> e<sup>i &theta;(r, t)</sup></code>
+          </div>
+          <p class="info-text">
+            Because all $10^{22}$ Cooper pairs share the <em>identical</em> quantum state, the phase $\theta$ is a macroscopic observable. 
+            Across an insulating barrier (SIS junction), weak quantum mechanical tunneling couples the two wavefunctions:
+          </p>
+          <div class="formula-box">
+            <code>I<sub>s</sub> = I<sub>c</sub> sin(&phi;)<br>
+            d&phi;/dt = (2e / &hbar;) V = (2&pi; / &Phi;<sub>0</sub>) V</code>
+          </div>
+          <p class="info-text">
+            <strong>DC Josephson Effect:</strong> A zero-voltage supercurrent flows up to $I_c$.<br>
+            <strong>AC Josephson Effect:</strong> A constant voltage $V$ produces GHz oscillations at $f_J = 483.6 \text{ MHz}/\mu\text{V}$.
+          </p>
+        </div>
+
+        <!-- Column 2: Quantum Interference (SQUID) -->
+        <div class="card">
+          <div class="card-title">
+            <span>2. SQUID Double-Slit Analogy</span>
+            <span class="tag">Fluxoid Quantization</span>
+          </div>
+          <p class="info-text">
+            Single-valuedness of the macroscopic wavefunction around any closed superconducting loop requires:
+          </p>
+          <div class="formula-box">
+            <code>&oint; &nabla;&theta; &middot; dl = 2&pi; m &implies; &Phi;<sub>total</sub> = m &Phi;<sub>0</sub></code>
+          </div>
+          <p class="info-text">
+            For two junctions in parallel, the total current is the quantum superposition:
+          </p>
+          <div class="formula-box">
+            <code>I(&phi;<sub>0</sub>) = I<sub>c1</sub> sin(&phi;<sub>0</sub> - &pi;&Phi;/&Phi;<sub>0</sub>) + I<sub>c2</sub> sin(&phi;<sub>0</sub> + &pi;&Phi;/&Phi;<sub>0</sub>)</code>
+          </div>
+          <p class="info-text">
+            When symmetric ($I_{c1} = I_{c2} = I_c$):
+          </p>
+          <div class="formula-box">
+            <code>I<sub>c,max</sub>(&Phi;) = 2 I<sub>c</sub> |cos(&pi; &Phi; / &Phi;<sub>0</sub>)|</code>
+          </div>
+          <p class="info-text">
+            This is the exact optical equivalent of Young's double-slit experiment performed with <strong>matter waves of condensed Cooper pairs</strong>!
+          </p>
+        </div>
+
+        <!-- Column 3: Modern Nanoelectronics -->
+        <div class="card">
+          <div class="card-title">
+            <span>3. Nanoelectronic Applications</span>
+            <span class="tag">Qubits & Sensors</span>
+          </div>
+          <p class="info-text">
+            <strong>1. Superconducting Qubits (Transmons):</strong><br>
+            The Josephson junction is the <em>only</em> known non-dissipative, non-linear inductor:
+          </p>
+          <div class="formula-box">
+            <code>L<sub>J</sub>(&phi;) = &Phi;<sub>0</sub> / (2&pi; I<sub>c</sub> cos &phi;)</code>
+          </div>
+          <p class="info-text">
+            This non-linearity breaks the harmonic oscillator degeneracy, creating an artificial two-level quantum atom (the building block of Google and IBM quantum computers).
+          </p>
+          <p class="info-text">
+            <strong>2. Ultra-Sensitive Magnetometers:</strong><br>
+            By converting magnetic flux into measurable voltage oscillations ($\Delta V \approx 100\,\mu\text{V}/\Phi_0$), SQUIDs detect fields down to $10^{-15}\text{ T}$ (1 fT)—capable of recording synaptic neuronal firing in human brains (MEG).
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div>Quantum Transport Simulation Suite &bull; Course Project: Josephson Junctions & SQUID Interference</div>
+    <div style="font-family: monospace; color: var(--cyan);">&Phi;<sub>0</sub> = 2.067833848 &times; 10<sup>-15</sup> Wb</div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- JAVASCRIPT PHYSICS SIMULATION ENGINE                       -->
+  <!-- ======================================================== -->
+  <script>
+    // --- Global State ---
+    const STATE = {
+      flux: 0.0,
+      asymmetry: 1.0,
+      betaL: 0.0,
+      isSweepingFlux: false,
+      sweepDir: 1,
+      // Washboard state
+      current: 0.50,
+      betaC: 0.20,
+      phase: Math.asin(0.50),
+      dphase: 0.0,
+      // Scope buffers
+      timeHist: [],
+      phaseHist: [],
+      voltHist: [],
+      // Animation frames
+      cooperPairs: [],
+      lastTime: performance.now(),
+      // IV tab
+      ivBetaC: 0.5,
+      iRf: 0.0,
+      omegaRf: 0.5
+    };
+
+    // Initialize Cooper pairs for SQUID visualization
+    for (let i = 0; i < 28; i++) {
+      STATE.cooperPairs.push({
+        arm: Math.random() < 0.5 ? 1 : 2, // 1: top arm, 2: bottom arm
+        progress: Math.random(), // 0.0 to 1.0 along the path
+        speed: 0.003 + Math.random() * 0.001
+      });
+    }
+
+    // --- Tab Switching ---
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+
+      if (tabId === 'squid-tab') {
+        drawSquidPlot();
+      } else if (tabId === 'iv-tab') {
+        updateIVCurve();
+      }
+    }
+
+    // --- SQUID Math & Physics Calculations ---
+    function calculateSquidCriticalCurrent(phiExt, alpha, betaL) {
+      // phiExt in units of Phi_0
+      // alpha = Ic2 / Ic1  (with Ic1 = 1)
+      const Ic1 = 1.0;
+      const Ic2 = alpha;
+
+      if (betaL === 0) {
+        // Analytical ideal solution
+        // Ic_total = sqrt(Ic1^2 + Ic2^2 + 2*Ic1*Ic2*cos(2*pi*phiExt))
+        const val = Math.sqrt(Ic1*Ic1 + Ic2*Ic2 + 2*Ic1*Ic2*Math.cos(2 * Math.PI * phiExt));
+        return val;
+      } else {
+        // Numerical screening with loop inductance betaL
+        // Self-consistent circulating current
+        let bestIc = 0;
+        const phaseShift = 2 * Math.PI * phiExt;
+        // Sample overall phase phi0
+        for (let i = 0; i <= 60; i++) {
+          const phi0 = (i / 60) * 2 * Math.PI;
+          // Approximate internal flux: phi_int = phi_ext + beta_L / 2 * (Ic2*sin(phi2) - Ic1*sin(phi1))
+          const dphi = phaseShift; // dominant order
+          const I_tot = Ic1 * Math.sin(phi0 - dphi/2) + Ic2 * Math.sin(phi0 + dphi/2);
+          if (I_tot > bestIc) bestIc = I_tot;
+        }
+        // Attenuate peak with betaL screening
+        const factor = 1 / (1 + betaL * 0.45);
+        const baseline = Math.abs(Ic1 - Ic2);
+        return baseline + (bestIc - baseline) * factor;
+      }
+    }
+
+    // --- Setup Controls & Listeners ---
+    const sliderFlux = document.getElementById('sliderFlux');
+    const sliderAsym = document.getElementById('sliderAsym');
+    const sliderBetaL = document.getElementById('sliderBetaL');
+    const sliderCurrent = document.getElementById('sliderCurrent');
+    const sliderBetaC = document.getElementById('sliderBetaC');
+
+    sliderFlux.addEventListener('input', (e) => {
+      STATE.flux = parseFloat(e.target.value);
+      document.getElementById('valFlux').innerText = STATE.flux.toFixed(2);
+      drawSquidPlot();
+    });
+
+    sliderAsym.addEventListener('input', (e) => {
+      STATE.asymmetry = parseFloat(e.target.value);
+      document.getElementById('valAsym').innerText = STATE.asymmetry.toFixed(2);
+      drawSquidPlot();
+    });
+
+    sliderBetaL.addEventListener('input', (e) => {
+      STATE.betaL = parseFloat(e.target.value);
+      document.getElementById('valBetaL').innerText = STATE.betaL.toFixed(2);
+      drawSquidPlot();
+    });
+
+    sliderCurrent.addEventListener('input', (e) => {
+      STATE.current = parseFloat(e.target.value);
+      document.getElementById('valCurrent').innerText = STATE.current.toFixed(2);
+    });
+
+    sliderBetaC.addEventListener('input', (e) => {
+      STATE.betaC = parseFloat(e.target.value);
+      let desc = STATE.betaC < 1 ? " (Overdamped)" : (STATE.betaC > 1 ? " (Underdamped)" : " (Critical)");
+      document.getElementById('valBetaC').innerText = STATE.betaC.toFixed(2) + desc;
+    });
+
+    function toggleFluxSweep() {
+      STATE.isSweepingFlux = !STATE.isSweepingFlux;
+      const btn = document.getElementById('btnSweepFlux');
+      if (STATE.isSweepingFlux) {
+        btn.classList.add('active-toggle');
+        btn.innerText = "Pause Flux Sweep";
+      } else {
+        btn.classList.remove('active-toggle');
+        btn.innerText = "Auto-Sweep Flux \u03A6(t)";
+      }
+    }
+
+    function setPreset(type) {
+      if (type === 'destructive') {
+        STATE.flux = 0.5;
+        STATE.asymmetry = 1.0;
+        STATE.betaL = 0.0;
+      } else if (type === 'constructive') {
+        STATE.flux = 1.0;
+        STATE.asymmetry = 1.0;
+        STATE.betaL = 0.0;
+      } else if (type === 'asymmetric') {
+        STATE.flux = 0.5;
+        STATE.asymmetry = 0.3;
+        STATE.betaL = 0.0;
+      }
+      sliderFlux.value = STATE.flux;
+      sliderAsym.value = STATE.asymmetry;
+      sliderBetaL.value = STATE.betaL;
+      document.getElementById('valFlux').innerText = STATE.flux.toFixed(2);
+      document.getElementById('valAsym').innerText = STATE.asymmetry.toFixed(2);
+      document.getElementById('valBetaL').innerText = STATE.betaL.toFixed(2);
+      drawSquidPlot();
+    }
+
+    function kickParticle() {
+      STATE.dphase += 1.8;
+    }
+
+    function setWashboardPreset(type) {
+      if (type === 'subcritical') {
+        STATE.current = 0.45;
+        STATE.betaC = 0.2;
+        STATE.phase = Math.asin(STATE.current);
+        STATE.dphase = 0;
+      } else if (type === 'critical') {
+        STATE.current = 1.35;
+        STATE.betaC = 0.2;
+      } else if (type === 'underdamped') {
+        STATE.current = 0.70;
+        STATE.betaC = 3.0;
+        STATE.dphase = 1.5;
+      }
+      sliderCurrent.value = STATE.current;
+      sliderBetaC.value = STATE.betaC;
+      document.getElementById('valCurrent').innerText = STATE.current.toFixed(2);
+      document.getElementById('valBetaC').innerText = STATE.betaC.toFixed(2);
+    }
+
+    // --- CANVAS RENDERING 1: SQUID Loop & Matter Wave Interference ---
+    const squidCanvas = document.getElementById('squidCanvas');
+    const sCtx = squidCanvas.getContext('2d');
+
+    function resizeCanvases() {
+      const dpr = window.devicePixelRatio || 1;
+      [squidCanvas, document.getElementById('squidPlotCanvas'), 
+       document.getElementById('washboardCanvas'), document.getElementById('scopeCanvas'),
+       document.getElementById('ivCanvas')].forEach(c => {
+        if (!c) return;
+        const rect = c.getBoundingClientRect();
+        c.width = rect.width * dpr;
+        c.height = rect.height * dpr;
+        const ctx = c.getContext('2d');
+        ctx.scale(dpr, dpr);
+      });
+      drawSquidPlot();
+      updateIVCurve();
+    }
+    window.addEventListener('resize', resizeCanvases);
+
+    function drawSquidLoop(dt) {
+      const w = squidCanvas.getBoundingClientRect().width;
+      const h = squidCanvas.getBoundingClientRect().height;
+      sCtx.clearRect(0, 0, w, h);
+
+      const cx = w * 0.48;
+      const cy = h * 0.50;
+      const rx = w * 0.28;
+      const ry = h * 0.32;
+      const barThick = 24;
+
+      // Draw Magnetic Flux penetrating the loop
+      const fluxSign = Math.sign(STATE.flux) || 1;
+      const fluxDensity = Math.min(24, Math.floor(Math.abs(STATE.flux) * 8) + 1);
+
+      sCtx.save();
+      for (let i = 0; i < fluxDensity; i++) {
+        const angle = (i / fluxDensity) * Math.PI * 2 + (performance.now() * 0.0005);
+        const rad = (i % 2 === 0 ? 0.35 : 0.65) * Math.min(rx, ry) * 0.65;
+        const fx = cx + Math.cos(angle) * rad;
+        const fy = cy + Math.sin(angle) * rad;
+
+        sCtx.beginPath();
+        sCtx.arc(fx, fy, 8, 0, Math.PI * 2);
+        sCtx.fillStyle = 'rgba(251, 191, 36, 0.12)';
+        sCtx.fill();
+        sCtx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+        sCtx.lineWidth = 1.5;
+        sCtx.stroke();
+
+        sCtx.fillStyle = '#fbbf24';
+        sCtx.font = '10px monospace';
+        sCtx.textAlign = 'center';
+        sCtx.textBaseline = 'middle';
+        sCtx.fillText(fluxSign >= 0 ? '\u2299' : '\u2297', fx, fy);
+      }
+
+      // Magnetic field label in the center
+      sCtx.fillStyle = '#fbbf24';
+      sCtx.font = 'bold 12px sans-serif';
+      sCtx.textAlign = 'center';
+      sCtx.fillText(`\u03A6_ext = ${STATE.flux.toFixed(2)} \u03A6\u2080`, cx, cy + 2);
+      sCtx.font = '10px sans-serif';
+      sCtx.fillStyle = 'rgba(251, 191, 36, 0.7)';
+      sCtx.fillText(`Magnetic Flux Quantum h/2e`, cx, cy + 18);
+      sCtx.restore();
+
+      // Draw Superconducting Loop Track
+      sCtx.strokeStyle = '#1e293b';
+      sCtx.lineWidth = barThick + 4;
+      sCtx.beginPath();
+      // Lead In
+      sCtx.moveTo(w * 0.05, cy);
+      sCtx.lineTo(cx - rx, cy);
+      // Top Arm
+      sCtx.quadraticCurveTo(cx - rx * 0.8, cy - ry, cx, cy - ry);
+      sCtx.quadraticCurveTo(cx + rx * 0.8, cy - ry, cx + rx, cy);
+      // Lead Out
+      sCtx.lineTo(w * 0.95, cy);
+      // Bottom Arm
+      sCtx.moveTo(cx - rx, cy);
+      sCtx.quadraticCurveTo(cx - rx * 0.8, cy + ry, cx, cy + ry);
+      sCtx.quadraticCurveTo(cx + rx * 0.8, cy + ry, cx + rx, cy);
+      sCtx.stroke();
+
+      // Glowing Core Track
+      sCtx.strokeStyle = '#0284c7';
+      sCtx.lineWidth = barThick - 4;
+      sCtx.stroke();
+
+      // Draw Josephson Junction 1 (Top)
+      drawJunctionBadge(cx, cy - ry, "J1: I_c1 = 1.0", '#00f0ff');
+      // Draw Josephson Junction 2 (Bottom)
+      drawJunctionBadge(cx, cy + ry, `J2: I_c2 = ${STATE.asymmetry.toFixed(2)}`, '#b026ff');
+
+      // Calculate Quantum Phase Shifts
+      const phaseDiff = 2 * Math.PI * STATE.flux;
+      const dphi1 = -phaseDiff / 2;
+      const dphi2 = phaseDiff / 2;
+      const curIc = calculateSquidCriticalCurrent(STATE.flux, STATE.asymmetry, STATE.betaL);
+      const maxPossible = 1.0 + STATE.asymmetry;
+      const interferencePercent = Math.round((curIc / maxPossible) * 100);
+
+      // Update metrics
+      document.getElementById('readoutIcMax').innerText = curIc.toFixed(2) + " I_c0";
+      document.getElementById('readoutPhaseDiff').innerText = (STATE.flux * 2).toFixed(2) + " \u03C0 rad";
+      document.getElementById('readoutInterference').innerText = `${interferencePercent}% (${interferencePercent > 70 ? 'Constructive' : (interferencePercent < 30 ? 'Destructive' : 'Partial')})`;
+      const circCurrent = (STATE.asymmetry * Math.sin(phaseDiff / 2)).toFixed(2);
+      document.getElementById('readoutCirculating').innerText = circCurrent + " I_c0";
+
+      // Draw Cooper Pairs Traveling Along Ring
+      STATE.cooperPairs.forEach((cp, idx) => {
+        // Effective velocity scales with allowable supercurrent transmission
+        const transFactor = Math.max(0.15, curIc / maxPossible);
+        cp.progress += cp.speed * transFactor * (dt / 16.6);
+        if (cp.progress > 1.0) {
+          cp.progress = 0.0;
+          cp.arm = Math.random() < 0.5 ? 1 : 2;
+        }
+
+        let pos;
+        let pColor;
+        let phaseAngle;
+
+        if (cp.progress < 0.22) {
+          // Entering through left lead
+          const t = cp.progress / 0.22;
+          pos = { x: w * 0.06 + t * (cx - rx - w * 0.06), y: cy };
+          pColor = '#38bdf8';
+          phaseAngle = 0;
+        } else if (cp.progress > 0.78) {
+          // Exiting through right lead
+          const t = (cp.progress - 0.78) / 0.22;
+          pos = { x: cx + rx + t * (w * 0.94 - (cx + rx)), y: cy };
+          pColor = curIc > 0.5 ? '#10b981' : '#f43f5e';
+          phaseAngle = 0;
+        } else {
+          // In the arms
+          const t = (cp.progress - 0.22) / 0.56;
+          const u = (t - 0.5) * 2; // -1 to +1
+          const x = cx + u * rx;
+          const sign = cp.arm === 1 ? -1 : 1;
+          const y = cy + sign * ry * Math.sqrt(Math.max(0, 1 - (u * 0.95) * (u * 0.95)));
+          pos = { x, y };
+
+          if (cp.arm === 1) {
+            pColor = '#00f0ff';
+            phaseAngle = dphi1;
+          } else {
+            pColor = '#b026ff';
+            phaseAngle = dphi2;
+          }
+        }
+
+        // Draw Cooper pair (bound electron pair with wave envelope)
+        drawCooperPair(pos.x, pos.y, pColor, phaseAngle, performance.now() * 0.006 + idx);
+      });
+
+      // Draw Phasor / Interference Clock (Bottom-Right inset)
+      drawPhasorInset(w - 95, h - 90, 48, dphi1, dphi2, STATE.asymmetry, curIc);
+    }
+
+    function drawJunctionBadge(x, y, label, col) {
+      sCtx.save();
+      // Barrier box (insulating oxide layer)
+      sCtx.fillStyle = '#0f172a';
+      sCtx.strokeStyle = col;
+      sCtx.lineWidth = 2;
+      sCtx.beginPath();
+      sCtx.roundRect(x - 22, y - 18, 44, 36, 4);
+      sCtx.fill();
+      sCtx.stroke();
+
+      // Cross symbol (standard schematic for Josephson junction)
+      sCtx.strokeStyle = '#ffffff';
+      sCtx.lineWidth = 2.5;
+      sCtx.beginPath();
+      sCtx.moveTo(x - 12, y - 12);
+      sCtx.lineTo(x + 12, y + 12);
+      sCtx.moveTo(x + 12, y - 12);
+      sCtx.lineTo(x - 12, y + 12);
+      sCtx.stroke();
+
+      // Label
+      sCtx.font = '10px monospace';
+      sCtx.fillStyle = col;
+      sCtx.textAlign = 'center';
+      sCtx.fillText(label, x, y - 24);
+      sCtx.restore();
+    }
+
+    function drawCooperPair(x, y, color, phase, anim) {
+      sCtx.save();
+      // Cooper pair halo (wavepacket)
+      const pulse = 1 + Math.sin(anim) * 0.2;
+      sCtx.beginPath();
+      sCtx.arc(x, y, 9 * pulse, 0, Math.PI * 2);
+      sCtx.fillStyle = color === '#00f0ff' ? 'rgba(0, 240, 255, 0.2)' : 'rgba(176, 38, 255, 0.2)';
+      sCtx.fill();
+
+      // Electron 1
+      sCtx.beginPath();
+      sCtx.arc(x - 3.5, y, 3, 0, Math.PI * 2);
+      sCtx.fillStyle = '#ffffff';
+      sCtx.fill();
+
+      // Electron 2
+      sCtx.beginPath();
+      sCtx.arc(x + 3.5, y, 3, 0, Math.PI * 2);
+      sCtx.fillStyle = '#ffffff';
+      sCtx.fill();
+
+      // Coupling wave between electrons
+      sCtx.strokeStyle = color;
+      sCtx.lineWidth = 1.5;
+      sCtx.beginPath();
+      sCtx.moveTo(x - 3, y);
+      sCtx.lineTo(x + 3, y);
+      sCtx.stroke();
+
+      sCtx.restore();
+    }
+
+    function drawPhasorInset(cx, cy, radius, phi1, phi2, alpha, totalIc) {
+      sCtx.save();
+      // Background disc
+      sCtx.beginPath();
+      sCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+      sCtx.fillStyle = '#0b111e';
+      sCtx.strokeStyle = '#233148';
+      sCtx.lineWidth = 1.5;
+      sCtx.fill();
+      sCtx.stroke();
+
+      // Center crosshair
+      sCtx.strokeStyle = '#1e293b';
+      sCtx.beginPath();
+      sCtx.moveTo(cx - radius, cy);
+      sCtx.lineTo(cx + radius, cy);
+      sCtx.moveTo(cx, cy - radius);
+      sCtx.lineTo(cx, cy + radius);
+      sCtx.stroke();
+
+      // Phasor 1 (Cyan)
+      const len1 = radius * 0.44;
+      const x1 = cx + len1 * Math.cos(phi1);
+      const y1 = cy - len1 * Math.sin(phi1);
+      drawVector(cx, cy, x1, y1, '#00f0ff', 2);
+
+      // Phasor 2 from tip of 1 (Purple)
+      const len2 = radius * 0.44 * alpha;
+      const x2 = x1 + len2 * Math.cos(phi2);
+      const y2 = y1 - len2 * Math.sin(phi2);
+      drawVector(x1, y1, x2, y2, '#b026ff', 2);
+
+      // Resultant Phasor (Gold)
+      drawVector(cx, cy, x2, y2, '#fbbf24', 2.5);
+
+      sCtx.font = '9px sans-serif';
+      sCtx.fillStyle = '#fbbf24';
+      sCtx.textAlign = 'center';
+      sCtx.fillText('Phase Addition', cx, cy + radius + 14);
+      sCtx.restore();
+    }
+
+    function drawVector(x0, y0, x1, y1, color, width) {
+      sCtx.strokeStyle = color;
+      sCtx.lineWidth = width;
+      sCtx.beginPath();
+      sCtx.moveTo(x0, y0);
+      sCtx.lineTo(x1, y1);
+      sCtx.stroke();
+
+      // Arrow head
+      const angle = Math.atan2(y1 - y0, x1 - x0);
+      sCtx.fillStyle = color;
+      sCtx.beginPath();
+      sCtx.moveTo(x1, y1);
+      sCtx.lineTo(x1 - 6 * Math.cos(angle - Math.PI / 6), y1 - 6 * Math.sin(angle - Math.PI / 6));
+      sCtx.lineTo(x1 - 6 * Math.cos(angle + Math.PI / 6), y1 - 6 * Math.sin(angle + Math.PI / 6));
+      sCtx.fill();
+    }
+
+    // --- SQUID PLOT: Ic vs Phi curve ---
+    const plotCanvas = document.getElementById('squidPlotCanvas');
+    const pCtx = plotCanvas.getContext('2d');
+
+    function drawSquidPlot() {
+      const w = plotCanvas.getBoundingClientRect().width;
+      const h = plotCanvas.getBoundingClientRect().height;
+      pCtx.clearRect(0, 0, w, h);
+
+      const padX = 45;
+      const padY = 30;
+      const pw = w - padX * 2;
+      const ph = h - padY * 2;
+
+      // Grid lines
+      pCtx.strokeStyle = '#1e293b';
+      pCtx.lineWidth = 1;
+
+      // X Grid (-2 to +2 Phi_0)
+      for (let f = -2; f <= 2; f += 1) {
+        const x = padX + ((f - (-2.5)) / 5.0) * pw;
+        pCtx.beginPath();
+        pCtx.moveTo(x, padY);
+        pCtx.lineTo(x, padY + ph);
+        pCtx.stroke();
+
+        pCtx.font = '10px monospace';
+        pCtx.fillStyle = '#64748b';
+        pCtx.textAlign = 'center';
+        pCtx.fillText(`${f}\u03A6\u2080`, x, padY + ph + 16);
+      }
+
+      // Y Grid
+      const maxPlotY = 2.2;
+      for (let yVal = 0; yVal <= 2.0; yVal += 1.0) {
+        const y = padY + ph - (yVal / maxPlotY) * ph;
+        pCtx.beginPath();
+        pCtx.moveTo(padX, y);
+        pCtx.lineTo(padX + pw, y);
+        pCtx.stroke();
+
+        pCtx.font = '10px monospace';
+        pCtx.fillStyle = '#64748b';
+        pCtx.textAlign = 'right';
+        pCtx.fillText(`${yVal.toFixed(1)}`, padX - 8, y + 4);
+      }
+
+      // Draw Theoretical Curve
+      pCtx.strokeStyle = '#00f0ff';
+      pCtx.lineWidth = 2.5;
+      pCtx.beginPath();
+
+      const numPoints = 250;
+      for (let i = 0; i <= numPoints; i++) {
+        const phi = -2.5 + (i / numPoints) * 5.0;
+        const ic = calculateSquidCriticalCurrent(phi, STATE.asymmetry, STATE.betaL);
+        const x = padX + ((phi - (-2.5)) / 5.0) * pw;
+        const y = padY + ph - (ic / maxPlotY) * ph;
+        if (i === 0) pCtx.moveTo(x, y);
+        else pCtx.lineTo(x, y);
+      }
+      pCtx.stroke();
+
+      // Current operating point indicator
+      const curIc = calculateSquidCriticalCurrent(STATE.flux, STATE.asymmetry, STATE.betaL);
+      const curX = padX + ((STATE.flux - (-2.5)) / 5.0) * pw;
+      const curY = padY + ph - (curIc / maxPlotY) * ph;
+
+      // Marker line
+      pCtx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+      pCtx.setLineDash([3, 3]);
+      pCtx.beginPath();
+      pCtx.moveTo(curX, padY);
+      pCtx.lineTo(curX, padY + ph);
+      pCtx.stroke();
+      pCtx.setLineDash([]);
+
+      // Pulsing dot
+      pCtx.beginPath();
+      pCtx.arc(curX, curY, 6, 0, Math.PI * 2);
+      pCtx.fillStyle = '#fbbf24';
+      pCtx.fill();
+      pCtx.strokeStyle = '#ffffff';
+      pCtx.lineWidth = 2;
+      pCtx.stroke();
+
+      // Axis labels
+      pCtx.font = '11px sans-serif';
+      pCtx.fillStyle = '#94a3b8';
+      pCtx.textAlign = 'center';
+      pCtx.fillText('Applied Magnetic Flux \u03A6 / \u03A6\u2080', padX + pw / 2, h - 4);
+    }
+
+    // --- CANVAS RENDERING 2: Tilted Washboard Potential ---
+    const washCanvas = document.getElementById('washboardCanvas');
+    const wCtx = washCanvas.getContext('2d');
+    const scopeCanvas = document.getElementById('scopeCanvas');
+    const scCtx = scopeCanvas.getContext('2d');
+
+    function updateWashboardPhysics(dt) {
+      // Dimensionless RCSJ equation:
+      // betaC * d2phi/dtau2 + dphi/dtau + sin(phi) = i
+      const iBias = STATE.current;
+      const betaC = Math.max(0.01, STATE.betaC);
+      const subSteps = 8;
+      const dts = (dt * 0.05) / subSteps;
+
+      for (let s = 0; s < subSteps; s++) {
+        const force = iBias - Math.sin(STATE.phase);
+        let accel = (force - STATE.dphase) / betaC;
+        if (STATE.betaC < 0.05) {
+          // Pure overdamped limit: dphi/dtau = i - sin(phi)
+          STATE.dphase = force;
+          STATE.phase += STATE.dphase * dts * 15;
+        } else {
+          STATE.dphase += accel * dts;
+          STATE.phase += STATE.dphase * dts;
+        }
+      }
+
+      // Record in oscilloscope buffer
+      STATE.timeHist.push(performance.now());
+      STATE.phaseHist.push(STATE.phase);
+      STATE.voltHist.push(STATE.dphase);
+
+      if (STATE.phaseHist.length > 300) {
+        STATE.timeHist.shift();
+        STATE.phaseHist.shift();
+        STATE.voltHist.shift();
+      }
+
+      // Update text metrics
+      const isTrapped = Math.abs(STATE.dphase) < 0.06;
+      const stateEl = document.getElementById('readoutState');
+      if (isTrapped) {
+        stateEl.innerText = "Trapped (V = 0)";
+        stateEl.style.color = "#10b981";
+      } else {
+        stateEl.innerText = "Running (V > 0)";
+        stateEl.style.color = "#f43f5e";
+      }
+      document.getElementById('readoutPhase').innerText = (STATE.phase % (2 * Math.PI)).toFixed(2) + " rad";
+      document.getElementById('readoutVoltage').innerText = (Math.abs(STATE.dphase) * 12.5).toFixed(1) + " \u03BCV";
+      document.getElementById('readoutSupercurrent').innerText = Math.sin(STATE.phase).toFixed(2) + " I_c";
+    }
+
+    function drawWashboard() {
+      const w = washCanvas.getBoundingClientRect().width;
+      const h = washCanvas.getBoundingClientRect().height;
+      wCtx.clearRect(0, 0, w, h);
+
+      const tilt = STATE.current * 0.45; // visual slope factor
+      const cx = w * 0.5;
+      const cy = h * 0.55;
+
+      // Keep visual window centered on particle phase if rolling
+      const centerPhase = STATE.phase;
+      const phaseSpan = 5 * Math.PI; // show ~2.5 periods
+
+      // Draw potential curve: U(phi) = -cos(phi) - (I/Ic)*phi
+      wCtx.save();
+      wCtx.beginPath();
+      wCtx.strokeStyle = '#38bdf8';
+      wCtx.lineWidth = 3;
+
+      const points = [];
+      const numPts = 300;
+      for (let idx = 0; idx <= numPts; idx++) {
+        const phi = centerPhase - phaseSpan/2 + (idx / numPts) * phaseSpan;
+        const x = (idx / numPts) * w;
+        // Potential energy formula:
+        const u = -Math.cos(phi) - (phi - centerPhase) * tilt;
+        const y = cy + u * 48;
+        points.push({ x, y, phi });
+        if (idx === 0) wCtx.moveTo(x, y);
+        else wCtx.lineTo(x, y);
+      }
+      wCtx.stroke();
+
+      // Fill underneath potential
+      wCtx.lineTo(w, h);
+      wCtx.lineTo(0, h);
+      wCtx.fillStyle = 'rgba(14, 116, 144, 0.15)';
+      wCtx.fill();
+
+      // Find ball position on screen
+      const ballScreenX = cx;
+      const ballU = -Math.cos(STATE.phase);
+      const ballScreenY = cy + ballU * 48;
+
+      // Draw Rolling Ball (Cooper pair phase coordinate)
+      wCtx.beginPath();
+      wCtx.arc(ballScreenX, ballScreenY - 14, 14, 0, Math.PI * 2);
+      wCtx.fillStyle = '#fbbf24';
+      wCtx.shadowColor = '#fbbf24';
+      wCtx.shadowBlur = 18;
+      wCtx.fill();
+      wCtx.shadowBlur = 0;
+      wCtx.strokeStyle = '#ffffff';
+      wCtx.lineWidth = 2.5;
+      wCtx.stroke();
+
+      // Ball internal phase indicator line
+      wCtx.beginPath();
+      wCtx.moveTo(ballScreenX, ballScreenY - 14);
+      wCtx.lineTo(ballScreenX + 12 * Math.cos(STATE.phase * 2), ballScreenY - 14 + 12 * Math.sin(STATE.phase * 2));
+      wCtx.strokeStyle = '#1e293b';
+      wCtx.lineWidth = 3;
+      wCtx.stroke();
+
+      // Force Vectors
+      // Tilt force (I/Ic)
+      drawVector(ballScreenX, ballScreenY - 32, ballScreenX + tilt * 70, ballScreenY - 32, '#f43f5e', 2.5);
+      wCtx.font = '11px monospace';
+      wCtx.fillStyle = '#f43f5e';
+      wCtx.fillText('Tilt ~ I/I_c', ballScreenX + tilt * 70 + 8, ballScreenY - 30);
+
+      wCtx.restore();
+    }
+
+    function drawOscilloscope() {
+      const w = scopeCanvas.getBoundingClientRect().width;
+      const h = scopeCanvas.getBoundingClientRect().height;
+      scCtx.clearRect(0, 0, w, h);
+
+      // Grid
+      scCtx.strokeStyle = '#1e293b';
+      scCtx.lineWidth = 1;
+      for (let y = 30; y < h; y += 40) {
+        scCtx.beginPath();
+        scCtx.moveTo(0, y);
+        scCtx.lineTo(w, y);
+        scCtx.stroke();
+      }
+
+      if (STATE.voltHist.length < 2) return;
+
+      // Draw Voltage V(t) Pulses
+      scCtx.strokeStyle = '#f43f5e';
+      scCtx.lineWidth = 2;
+      scCtx.beginPath();
+      const n = STATE.voltHist.length;
+      for (let i = 0; i < n; i++) {
+        const x = (i / 300) * w;
+        const v = STATE.voltHist[i];
+        const y = h * 0.75 - Math.min(h * 0.65, v * 28);
+        if (i === 0) scCtx.moveTo(x, y);
+        else scCtx.lineTo(x, y);
+      }
+      scCtx.stroke();
+
+      // Legend
+      scCtx.font = '11px sans-serif';
+      scCtx.fillStyle = '#f43f5e';
+      scCtx.fillText('Instantaneous Voltage V(t) \u221D d\u03D5/dt', 16, 22);
+    }
+
+    // --- TAB 3: RCSJ I-V CHARACTERISTIC & SHAPIRO STEPS ---
+    const ivCanvas = document.getElementById('ivCanvas');
+    const ivCtx = ivCanvas.getContext('2d');
+
+    function updateIVCurve() {
+      STATE.ivBetaC = parseFloat(document.getElementById('sliderIvBetaC').value);
+      STATE.iRf = parseFloat(document.getElementById('sliderIrf').value);
+      STATE.omegaRf = parseFloat(document.getElementById('sliderOmegaRf').value);
+
+      document.getElementById('valIvBetaC').innerText = STATE.ivBetaC.toFixed(1);
+      document.getElementById('valIrf').innerText = STATE.iRf > 0 ? STATE.iRf.toFixed(2) : "0.00 (Off)";
+      document.getElementById('valOmegaRf').innerText = STATE.omegaRf.toFixed(2);
+
+      drawIVCurve();
+    }
+
+    function setShapiroPreset(amp) {
+      document.getElementById('sliderIrf').value = amp;
+      document.getElementById('sliderIvBetaC').value = 0.2;
+      document.getElementById('sliderOmegaRf').value = 0.45;
+      updateIVCurve();
+    }
+
+    function setHysteresisPreset(beta) {
+      document.getElementById('sliderIvBetaC').value = beta;
+      document.getElementById('sliderIrf').value = 0.0;
+      updateIVCurve();
+    }
+
+    function drawIVCurve() {
+      const w = ivCanvas.getBoundingClientRect().width;
+      const h = ivCanvas.getBoundingClientRect().height;
+      ivCtx.clearRect(0, 0, w, h);
+
+      const padX = 55;
+      const padY = 35;
+      const pw = w - padX * 2;
+      const ph = h - padY * 2;
+
+      // Origin
+      const ox = padX + pw * 0.48;
+      const oy = padY + ph * 0.52;
+
+      // Axes
+      ivCtx.strokeStyle = '#334155';
+      ivCtx.lineWidth = 1.5;
+      ivCtx.beginPath();
+      // Voltage Axis (horizontal)
+      ivCtx.moveTo(padX, oy);
+      ivCtx.lineTo(padX + pw, oy);
+      // Current Axis (vertical)
+      ivCtx.moveTo(ox, padY);
+      ivCtx.lineTo(ox, padY + ph);
+      ivCtx.stroke();
+
+      // Axis Labels
+      ivCtx.font = '11px sans-serif';
+      ivCtx.fillStyle = '#94a3b8';
+      ivCtx.textAlign = 'right';
+      ivCtx.fillText('Voltage V (\u03BCV) \u2192', padX + pw, oy - 10);
+      ivCtx.textAlign = 'left';
+      ivCtx.fillText('\u2191 Bias Current I', ox + 12, padY + 14);
+
+      // Normal state Ohm's law asymptote: V = I * Rn
+      ivCtx.strokeStyle = '#1e293b';
+      ivCtx.setLineDash([4, 4]);
+      ivCtx.beginPath();
+      ivCtx.moveTo(ox - pw * 0.42, oy + ph * 0.42);
+      ivCtx.lineTo(ox + pw * 0.42, oy - ph * 0.42);
+      ivCtx.stroke();
+      ivCtx.setLineDash([]);
+
+      const betaC = STATE.ivBetaC;
+      const irf = STATE.iRf;
+      const wrf = STATE.omegaRf;
+
+      // Retrapping current Ir calculation
+      const Ir = betaC <= 0.8 ? 1.0 : Math.max(0.18, (4 / Math.PI) / Math.sqrt(betaC));
+      document.getElementById('readoutRetrappingI').innerText = Ir.toFixed(2) + " I_c";
+
+      // 1. Forward Branch (Current increasing from 0 up)
+      ivCtx.strokeStyle = '#00f0ff';
+      ivCtx.lineWidth = 3;
+      ivCtx.beginPath();
+
+      // Supercurrent branch at V = 0: from I = -1 to +1
+      ivCtx.moveTo(ox, oy + ph * 0.38);
+      ivCtx.lineTo(ox, oy - ph * 0.38);
+
+      // Running branch for positive I > 1
+      const scaleI = ph * 0.38;
+      const scaleV = pw * 0.38;
+
+      const nPts = 120;
+      for (let k = 0; k <= nPts; k++) {
+        const iVal = 1.0 + (k / nPts) * 1.6;
+        let vVal;
+
+        if (irf > 0.05) {
+          // Shapiro steps: steps at integer multiples of wrf
+          const vBase = Math.sqrt(Math.max(0, iVal * iVal - 1));
+          // Quantize to steps
+          const stepIndex = Math.round(vBase / wrf);
+          const distToStep = Math.abs(vBase - stepIndex * wrf);
+          const stepWidth = irf * 0.38;
+          if (distToStep < stepWidth && stepIndex > 0 && stepIndex <= 3) {
+            vVal = stepIndex * wrf;
+          } else {
+            vVal = vBase;
+          }
+        } else {
+          // Standard RSJ: V = R * sqrt(I^2 - Ic^2)
+          vVal = Math.sqrt(Math.max(0, iVal * iVal - 1));
+        }
+
+        const px = ox + (vVal / 2.2) * scaleV;
+        const py = oy - (iVal / 2.6) * scaleI;
+        ivCtx.lineTo(px, py);
+      }
+      ivCtx.stroke();
+
+      // 2. Backward Branch (if hysteretic, betaC > 1)
+      if (betaC > 0.9 && irf < 0.1) {
+        ivCtx.strokeStyle = '#fbbf24';
+        ivCtx.setLineDash([5, 3]);
+        ivCtx.beginPath();
+
+        for (let k = nPts; k >= 0; k--) {
+          const iVal = Ir + (k / nPts) * (1.0 - Ir);
+          // High conductance ohmic branch
+          const vVal = (iVal / 1.0) * 0.92;
+          const px = ox + (vVal / 2.2) * scaleV;
+          const py = oy - (iVal / 2.6) * scaleI;
+          if (k === nPts) ivCtx.moveTo(px, py);
+          else ivCtx.lineTo(px, py);
+        }
+        // Drops back to zero voltage at Ir
+        ivCtx.lineTo(ox, oy - (Ir / 2.6) * scaleI);
+        ivCtx.stroke();
+        ivCtx.setLineDash([]);
+      }
+
+      // If Shapiro steps active, draw step markers
+      if (irf > 0.05) {
+        for (let s = 1; s <= 3; s++) {
+          const stepV = s * wrf;
+          const sx = ox + (stepV / 2.2) * scaleV;
+          if (sx < padX + pw) {
+            ivCtx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
+            ivCtx.setLineDash([2, 2]);
+            ivCtx.beginPath();
+            ivCtx.moveTo(sx, padY);
+            ivCtx.lineTo(sx, padY + ph);
+            ivCtx.stroke();
+            ivCtx.setLineDash([]);
+
+            ivCtx.font = '10px monospace';
+            ivCtx.fillStyle = '#fbbf24';
+            ivCtx.textAlign = 'center';
+            ivCtx.fillText(`n=${s}`, sx, oy + 16);
+          }
+        }
+      }
+
+      // Legend
+      ivCtx.font = '11px sans-serif';
+      ivCtx.textAlign = 'left';
+      ivCtx.fillStyle = '#00f0ff';
+      ivCtx.fillText('\u2014 Forward Sweep (Increasing I)', padX + 16, padY + 20);
+      if (betaC > 0.9 && irf < 0.1) {
+        ivCtx.fillStyle = '#fbbf24';
+        ivCtx.fillText('-- Return Sweep (Hysteresis Loop)', padX + 16, padY + 38);
+      }
+    }
+
+    // --- MAIN ANIMATION LOOP ---
+    function animationLoop(timestamp) {
+      const dt = Math.min(32, timestamp - STATE.lastTime);
+      STATE.lastTime = timestamp;
+
+      // 1. Auto-sweep flux if enabled
+      if (STATE.isSweepingFlux) {
+        STATE.flux += STATE.sweepDir * 0.006 * (dt / 16.6);
+        if (STATE.flux > 2.2) {
+          STATE.flux = 2.2;
+          STATE.sweepDir = -1;
+        } else if (STATE.flux < -2.2) {
+          STATE.flux = -2.2;
+          STATE.sweepDir = 1;
+        }
+        sliderFlux.value = STATE.flux;
+        document.getElementById('valFlux').innerText = STATE.flux.toFixed(2);
+        drawSquidPlot();
+      }
+
+      // 2. Render SQUID Tab
+      if (document.getElementById('squid-tab').classList.contains('active')) {
+        drawSquidLoop(dt);
+      }
+
+      // 3. Render Washboard Tab
+      if (document.getElementById('washboard-tab').classList.contains('active')) {
+        updateWashboardPhysics(dt);
+        drawWashboard();
+        drawOscilloscope();
+      }
+
+      requestAnimationFrame(animationLoop);
+    }
+
+    // Start everything
+    window.addEventListener('load', () => {
+      resizeCanvases();
+      drawSquidPlot();
+      updateIVCurve();
+      requestAnimationFrame(animationLoop);
+    });
+  </script>
+</body>
+</html>
